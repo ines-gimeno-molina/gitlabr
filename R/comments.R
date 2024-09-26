@@ -68,7 +68,9 @@ gl_comments <- function(project,
           "issues", id,
           "notes", note_id
         ),
-        "commit" = c("repository", "commits", id, "comments")
+        "commit" = c("repository", "commits", id, "comments"),
+        # Add handling of MR comments
+        "merge_request" = c("merge_requests", id, "notes", note_id) 
       ),
       ...
     ),
@@ -87,6 +89,12 @@ gl_get_issue_comments <- function(project, id, ...) {
 #' @export
 gl_get_commit_comments <- function(project, id, ...) {
   gl_get_comments(project, object_type = "commit", id, ...)
+}
+
+#' @rdname gl_comments
+#' @export
+gl_get_merge_request_comments <- function(project, id, ...) {  
+  gl_get_comments(project, object_type = "merge_request", id, ...)
 }
 
 #' @rdname gl_comments
@@ -127,6 +135,20 @@ gl_comment_issue <- function(project,
 
 #' @rdname gl_comments
 #' @export
+gl_comment_merge_request <- function(project, id, text, ...) {  
+  gl_comments(
+    project = project,
+    object_type = "merge_request",
+    id = id,
+    note_id = NULL,
+    body = text,
+    verb = httr::POST,
+    ...
+  )
+}
+
+#' @rdname gl_comments
+#' @export
 gl_edit_comment <- function(project,
                             object_type,
                             text,
@@ -146,6 +168,13 @@ gl_edit_comment <- function(project,
       note = text,
       verb = httr::PUT,
       ...
+    ),
+    "merge_request" = gl_comments(  
+      project = project,
+      object_type = "merge_request",
+      body = text,
+      verb = httr::PUT,
+      ...
     )
   )
 }
@@ -160,4 +189,10 @@ gl_edit_issue_comment <- function(project, ...) {
 #' @export
 gl_edit_commit_comment <- function(project, ...) {
   gl_edit_comment(project, object_type = "commit", ...)
+}
+
+#' @rdname gl_comments
+#' @export
+gl_edit_merge_request_comment <- function(project, ...) {  
+  gl_edit_comment(project, object_type = "merge_request", ...)
 }
