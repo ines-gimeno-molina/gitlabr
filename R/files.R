@@ -149,6 +149,48 @@ gl_get_file <- function(project,
     iff(to_char, rawToChar)
 }
 
+#' Download a file from a GitLab repository and save it locally
+#'
+#' @param project id (preferred way) or name of the project. Not repository name.
+#' @param file_path path to the file in the repository.
+#' @param ref name of ref (commit branch or tag). Defaults to 'main'.
+#' @param save_path local path where the file should be saved.
+#' @param api_version a switch to force deprecated GitLab API v3 behavior.
+#' See details section "API version" of [gl_connection()]
+#' @param ... additional arguments passed to the GitLab API call.
+#' @return The path to the saved file (invisible).
+#' @export
+#' @examples \dontrun{
+#' # Download README.md from the repository and save it as local_README.md
+#' gl_download_file(
+#'   project = "<<your-project-id>>",
+#'   file_path = "README.md",
+#'   save_path = "local_README.md"
+#' )
+#' }
+gl_download_file <- function(project,
+                             file_path,
+                             save_path,
+                             ref = get_main(),
+                             api_version = 4,
+                             ...) {
+  # Use existing gl_get_file function to retrieve file content
+  file_content <- gl_get_file(
+    project = project,
+    file_path = file_path,
+    ref = ref,
+    to_char = FALSE,  # Keep as raw for binary files
+    api_version = api_version,
+    ...
+  )
+  
+  # Write the content to a local file
+  writeBin(file_content, save_path)
+  
+  # Return the path to the saved file
+  return(invisible(save_path))
+}
+
 #' Upload, delete a file to a GitLab repository
 #'
 #' If the file already exists, it is updated/overwritten by default
