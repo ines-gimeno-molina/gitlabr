@@ -57,7 +57,7 @@ gl_repository <- function(project, req = c("tree"), ref = get_main(), ...) {
 #' }
 gl_list_files <- function(project, path = "", ref = get_main(), ...) {
   gitlab(gl_proj_req(project, c("repository", "tree"), ...),
-    path = utils::URLencode(path, reserved = FALSE), ref = ref, ...
+         path = utils::URLencode(path, reserved = FALSE), ref = ref, ...
   )
 }
 
@@ -68,7 +68,7 @@ gl_list_files <- function(project, path = "", ref = get_main(), ...) {
 #' @rdname gl_repository
 gl_file_exists <- function(project, file_path, ref, ...) {
   project_missing <- missing(project)
-
+  
   # Split file_path into each directory
   path_parts <- unlist(strsplit(utils::URLdecode(file_path), "/"))
   path_accumulated <- Reduce(
@@ -76,7 +76,7 @@ gl_file_exists <- function(project, file_path, ref, ...) {
     path_parts,
     accumulate = TRUE
   )
-
+  
   # And test if each directory exists
   # As gl_list_files only works if dir exists
   for (tested_path in path_accumulated) {
@@ -95,15 +95,15 @@ gl_file_exists <- function(project, file_path, ref, ...) {
       {
         nrow(.) > 0
       }
-
+    
     if (
       !path_exists &&
-        tested_path != path_accumulated[length(path_accumulated)]
+      tested_path != path_accumulated[length(path_accumulated)]
     ) {
       return(FALSE)
     }
   }
-
+  
   return(path_exists)
 }
 
@@ -149,6 +149,48 @@ gl_get_file <- function(project,
     iff(to_char, rawToChar)
 }
 
+#' Download a file from a GitLab repository and save it locally
+#'
+#' @param project id (preferred way) or name of the project. Not repository name.
+#' @param file_path path to the file in the repository.
+#' @param ref name of ref (commit branch or tag). Defaults to 'main'.
+#' @param save_path local path where the file should be saved.
+#' @param api_version a switch to force deprecated GitLab API v3 behavior.
+#' See details section "API version" of [gl_connection()]
+#' @param ... additional arguments passed to the GitLab API call.
+#' @return The path to the saved file (invisible).
+#' @export
+#' @examples \dontrun{
+#' # Download README.md from the repository and save it as local_README.md
+#' gl_download_file(
+#'   project = "<<your-project-id>>",
+#'   file_path = "README.md",
+#'   save_path = "local_README.md"
+#' )
+#' }
+gl_download_file <- function(project,
+                             file_path,
+                             save_path,
+                             ref = get_main(),
+                             api_version = 4,
+                             ...) {
+  # Use existing gl_get_file function to retrieve file content
+  file_content <- gl_get_file(
+    project = project,
+    file_path = file_path,
+    ref = ref,
+    to_char = FALSE,  # Keep as raw for binary files
+    api_version = api_version,
+    ...
+  )
+  
+  # Write the content to a local file
+  writeBin(file_content, save_path)
+  
+  # Return the path to the saved file
+  return(invisible(save_path))
+}
+
 #' Upload, delete a file to a GitLab repository
 #'
 #' If the file already exists, it is updated/overwritten by default
@@ -176,72 +218,4 @@ gl_get_file <- function(project,
 #' # Push content to repository with a commit
 #' gl_push_file(
 #'   project = "<<your-project-id>>",
-#'   file_path = "test_data.csv",
-#'   content = paste(readLines(tmpfile), collapse = "\n"),
-#'   commit_message = "New test data"
-#' )
-#' }
-gl_push_file <- function(project,
-                         file_path,
-                         content,
-                         commit_message,
-                         branch = get_main(),
-                         overwrite = TRUE,
-                         ...) {
-  exists <- gl_file_exists(project = project, file_path, ref = branch, ...)
-  if (!exists || overwrite) {
-    gitlab(
-      req = gl_proj_req(
-        project = project,
-        c(
-          "repository", "files",
-          utils::URLencode(file_path, reserved = TRUE)
-        ),
-        ...
-      ),
-      branch_name = branch, ## This is legacy for API v3 use and will be ignored by API v4
-      branch = branch,
-      content = content,
-      commit_message = commit_message,
-      verb = if (exists) {
-        httr::PUT
-      } else {
-        httr::POST
-      },
-      ...
-    )
-  } else {
-    tibble::tibble(
-      file_path = character(0),
-      branch = character(0)
-    )
-  }
-}
-
-#' @rdname onefile
-#' @export
-gl_delete_file <- function(project,
-                           file_path,
-                           commit_message,
-                           branch = get_main(),
-                           ...) {
-  exists <- gl_file_exists(project = project, file_path, ref = branch, ...)
-  if (exists) {
-    gitlab(
-      req = gl_proj_req(project = project, c(
-        "repository", "files",
-        utils::URLencode(file_path, reserved = TRUE)
-      ), ...),
-      branch_name = branch, ## This is legacy for API v3 use and will be ignored by API v4
-      branch = branch,
-      commit_message = commit_message,
-      verb = httr::DELETE,
-      ...
-    )
-  } else {
-    tibble::tibble(
-      file_path = character(0),
-      branch = character(0)
-    )
-  }
-}
+#'   file_path =
