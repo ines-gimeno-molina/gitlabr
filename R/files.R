@@ -245,3 +245,38 @@ gl_delete_file <- function(project,
     )
   }
 }
+
+#' Upload a file to GitLab repository uploads
+#'
+#' This function allows you to upload a Word document or any other file type
+#' to the uploads section of a GitLab repository.
+#'
+#' @param project id (preferred way) or name of the project.
+#' Not repository name.
+#' @param file_path the local path to the file that you want to upload.
+#' @param ... additional arguments passed on to [gitlab()] API call.
+#' @export
+#' @return Tibble with details of the uploaded file (including URL, file name, etc.).
+#' @examples \dontrun{
+#'
+#' # Upload a file
+#' gl_upload_file(
+#'   project = "<<your-project-id>>",
+#'   file_path = "path/to/document.txt"
+#' )
+#' }
+gl_upload_file <- function(project, file_path, ...) {
+  file_content <- httr::upload_file(file_path)
+  
+  gitlab(
+    req = gl_proj_req(
+      project = project,
+      c("uploads"),
+      ...
+    ),
+    file = file_content,
+    verb = httr::POST,
+    ...
+  )
+}
+
